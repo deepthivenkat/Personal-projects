@@ -1,0 +1,56 @@
+import collections
+# Definition for a binary tree node.
+# class TreeNode(object):
+#     def __init__(self, x):
+#         self.val = x
+#         self.left = None
+#         self.right = None
+
+class Stack:
+    def __init__(self):
+        self.d = collections.deque()
+    def __len__(self):
+        return len(self.d)
+    def isEmpty(self):
+        if self.d:
+            return False 
+        else:
+            return True
+    def push(self, item):
+        self.d.extend([item])
+    def pop(self):
+        if not self.isEmpty():
+            return self.d.pop()
+    def top(self):
+        return self.d[-1]
+
+class Solution(object):
+    def minDepth(self, root):
+        s = Stack()
+        visited = []
+        s.push(root)
+        current_level_distance = []
+        minDistance = 0
+        if root:
+            root.distance = 1
+            while not s.isEmpty():
+                current = s.top()
+                if current.left == None and current.right == None:
+                    current_level_distance.append(current.distance)
+                if current.left and current.left not in visited:
+                    s.push(current.left)
+                    current.left.distance = current.distance + 1
+                elif current.right and current.right not in visited:
+                    s.push(current.right)
+                    current.right.distance = current.distance + 1
+                else:
+                    visited.append(s.pop())
+
+        return min(current_level_distance)  if current_level_distance else 0
+            
+        
+        """
+        :type root: TreeNode
+        :rtype: int
+        """
+        
