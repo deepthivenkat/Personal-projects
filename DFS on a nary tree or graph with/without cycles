@@ -1,0 +1,163 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""The following code builds a n-ary tree from a nested list. 
+It takes an alphabet as input. 
+It returns a node if the node containing the alphabet 
+is present in the tree. Otherwise it returns None.
+
+To pass an input to the code, run:
+	python DFSearcher.py "['a',['b',['d','e','f'],'c',['g',['h']]]]"
+
+	This builds the tree
+								a
+							b		 c
+						d   e   f    g
+									 h
+
+When prompted Enter the alphabet to be searched in the tree:
+	enter the node name without any quotes
+	Example: 
+
+		Enter the alphabet to be searched in the tree
+		h
+"""
+
+import ast
+from collections import defaultdict
+import sys
+import unittest
+
+
+def validate_input(input_list):
+	assert type(input_list), 'list'
+	# Check if every item in the given list is either a string or a list and there is atleast one item
+	return all([ isinstance(node,list) or isinstance(node,str) for node in input_list]) and len(input_list) > 0
+
+def flatten(container):
+	# returns a flat list [a,b,c,d,e,f,g,h]
+    for i in container:
+        if isinstance(i, (list,tuple)):
+            for j in flatten(i):
+                yield j
+        else:
+            yield i
+
+class Node():
+	def __init__(self, value, children=[]):
+		self.value = value
+		self.children = children 	
+
+
+	def __repr__(self):
+	    return "%s(Value = %r, Children = %r)" %(self.__class__.__name__, self.value, self.children)	
+
+
+class Nary_tree():
+	def __init__(self, parent, children_list):
+		self.root = None
+		self.children = []
+		self.no_of_nodes = 0
+		self.visited = []
+		self.node_set = defaultdict(int)
+		#This hash map is used to check for cycles
+		if len(children_list)==1:
+			#Case where only root is present
+			temp = Node(parent)
+			self.flat_node_list.append(temp)
+			self.root = temp
+			self.node_set[parent] += 1
+			self.no_of_nodes += 1
+			return
+		self.flat_node_list = []
+		temp = self.constructSubtree(parent, children_list)
+		self.no_of_nodes += 1
+		self.flat_node_list.append(temp)
+		self.root = temp
+			
+
+
+	def constructSubtree(self, parent, children_list):
+		subtree_child = []
+		self.node_set[parent] += 1
+		# The following condition is to check if there are only leaves and no other subtree in children_list
+		if any(isinstance(item, list) for item in children_list):
+			# Subtree present
+			for node_val in children_list:
+				if not isinstance(node_val, str):
+					# Here node_val is the root of the child subtree.
+					constructed_subtree = self.constructSubtree(children_list[0],children_list[1:][0])
+					subtree_child.append(constructed_subtree)
+					self.flat_node_list.append(constructed_subtree)
+					# Remove already added subtree from children_list
+					children_list = children_list[2:]
+					self.no_of_nodes += 1
+		else:
+			# No Subtree. Just leaves.
+			for node_val in children_list:
+				# The following condition is a check for cycles - does the child of current node point to already existing node?
+				if node_val not in self.node_set:
+					self.node_set[node_val] += 1
+					leaf_node = Node(node_val)
+					self.flat_node_list.append(leaf_node)
+					subtree_child.append(leaf_node)
+					self.no_of_nodes += 1
+				else:
+					for existing in self.flat_node_list:
+							if node_val == existing.value:
+								subtree_child.append(existing)					
+
+		return Node(parent, subtree_child)
+
+	
+	def DFSearchTree(self, search_element, node=None):
+		if not node:
+			node = self.root
+		# If there is a cycle, this makes sure we do not keep adding the same node again to visited and the method exists 
+		# once all the nodes are visited.
+		if node.value not in self.node_set:
+			self.visited.append(node)
+		if node.value == search_element:
+			return node
+		for item in node.children:
+			p = self.DFSearchTree(search_element, item)
+			if p:
+				# This will return the function immediately after the node is found instead of executing other items.
+				return p
+			elif p is None and len(self.visited) == self.no_of_nodes:
+				# If all nodes have been visited and none of the recursive methods return a valid node, return None.
+				return p
+
+
+class TestHelpers(unittest.TestCase):
+
+	def test_tree_structure(self):
+		#Unit test to check if all the nodes from input are present in the tree structure.
+		self.assertEqual(set(flatten(ast.literal_eval("['a',['b',['d','e','f'],'c',['g',['h']]]]"))), 
+			set(Nary_tree('a', ast.literal_eval("['b',['d','e','f'],'c',['g',['h']]]")).node_set.keys()))
+		self.assertEqual(set(flatten(ast.literal_eval("['a',['b', ['a']]]"))), 
+			set(Nary_tree('a', ast.literal_eval("['a',['b', ['a']]]")).node_set.keys()))
+
+			
+	
+def main():
+	# ast.literal_eval takes the string as input and converts it to a list
+	input_list = ast.literal_eval(sys.argv[1])
+	if validate_input(input_list):
+		# Tree building happens recursively in the constructor of the class Nary_tree.
+		tree = Nary_tree(input_list[0], input_list[1:][0])
+		flat_list = flatten(input_list)
+		suite = unittest.TestLoader().loadTestsFromTestCase(TestHelpers)
+		unittest.TextTestRunner().run(suite)
+	else:
+		raise Exception('Input not valid. Make sure input is a nested list of alphabets')	
+	print 'Enter the alphabet to be searched in the tree'
+	search_element = raw_input()
+	search_node = tree.DFSearchTree(search_element)
+	print 'User Searched: ', search_element, ' Found: ', search_node
+	
+
+
+
+if __name__=="__main__":
+	main()
